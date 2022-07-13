@@ -33,6 +33,12 @@ setup(
         'pandas',
         'icecream',
         'pyqt5',
-        'starfile'
+        'starfile',
+        'magicgui',
     ],
+    entry_points={
+        "console_scripts": [
+            "ribodist.run=RiboDist.main:run_nb",
+        ],
+    }
 )
