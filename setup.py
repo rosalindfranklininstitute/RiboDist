@@ -26,7 +26,7 @@ setup(
     license='Apache License, Version 2.0',
     zip_safe=False,
     install_requires=[
-        'jupyterlab',
+        'matplotlib',
         'numpy',
         'scipy',
         'scikit-learn',

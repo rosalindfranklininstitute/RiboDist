@@ -31,6 +31,9 @@ from . import func_defs as fd
 
     output_star={"widget_type": "FileEdit",
                  "label": "Path to output star file"},
+    output_figs_folder={"widget_type": "FileEdit",
+                   "label": "Folder for figures output",
+                   "mode": "d"},
     models_folder={"widget_type": "FileEdit",
                    "label": "Folder containing models",
                    "mode": "d"},
@@ -45,6 +48,7 @@ from . import func_defs as fd
 )
 def rd_main(
         output_star = Path("."),
+        output_figs_folder = Path("./figs"),
         models_folder = Path("."),
         models_format = Path("."),
         models_bin = 1,
@@ -53,6 +57,8 @@ def rd_main(
 ):
     params = locals()
     full_models_format = str(params['models_folder']) + '/' + str(params['models_format'])
+    if not params['output_figs_folder'].is_dir():
+        params['output_figs_folder'].mkdir()
 
     ribo_star, TS_list, pixel_size_nm = fd.get_ribo_from_star(star_file=str(params['star_file']))
 
@@ -92,6 +98,13 @@ def rd_main(
         #     Update of star-DataFrame
         ribo_star['particles'].loc[ribo_star['particles'].rlnTS==curr_ts, 'rlnDistToEdge_nm'] = df.to_any_edge.to_numpy() * pixel_size_nm * params['models_bin'] / params['star_bin']
         ribo_star['particles'].loc[ribo_star['particles'].rlnTS==curr_ts, 'rlnLamellaThickness_nm'] = df.thickness.to_numpy() * pixel_size_nm * params['models_bin'] / params['star_bin']
+
+        # Saving figures
+        fd.savefig(top_in=interped_top,
+                   bot_in=interped_bot,
+                   ribo_in=ribo,
+                   to_edge_in=to_edge,
+                   save_path=str(params['output_figs_folder']) + '/' + f"TS_{curr_ts}.png")
 
     # Write out star file
     sf.write(ribo_star, str(params['output_star']), overwrite=True)

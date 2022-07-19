@@ -25,6 +25,9 @@ from sklearn.cluster import AgglomerativeClustering
 import scipy.interpolate as spin
 from scipy.spatial.transform import Rotation as R
 
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
 
 def get_ribo_from_star(star_file):
     """
@@ -142,3 +145,21 @@ def interpolator(coords_in, upper_in, lower_in, N=100):
         to_edge[idx] = [np.nanmin(np.linalg.norm(interped_top - point, axis=2)), np.nanmin(np.linalg.norm(interped_bot - point, axis=2))]
 
     return interped_top, interped_bot, to_edge, thickness
+
+
+def savefig(top_in, bot_in, ribo_in, to_edge_in, save_path):
+    top_reshape = top_in.reshape((top_in.size//3, 3))
+    bot_reshape = bot_in.reshape((bot_in.size//3, 3))
+
+    fig = plt.figure()
+    ax = fig.add_subplot(projection="3d")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+    ax.scatter(top_reshape[:,0], top_reshape[:,1], top_reshape[:,2], c="r", s=2)
+    ax.scatter(bot_reshape[:,0], bot_reshape[:,1], bot_reshape[:,2], c="b", s=2)
+    ax.scatter(ribo_in[:,0], ribo_in[:,1], ribo_in[:,2], c=np.min(to_edge_in, axis=1), cmap="inferno_r")
+
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
