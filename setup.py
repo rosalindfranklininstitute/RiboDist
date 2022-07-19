@@ -27,6 +27,7 @@ setup(
     zip_safe=False,
     install_requires=[
         'matplotlib',
+        'tqdm',
         'numpy',
         'scipy',
         'scikit-learn',

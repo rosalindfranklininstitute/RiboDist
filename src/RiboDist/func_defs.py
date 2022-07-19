@@ -151,7 +151,7 @@ def savefig(top_in, bot_in, ribo_in, to_edge_in, save_path):
     top_reshape = top_in.reshape((top_in.size//3, 3))
     bot_reshape = bot_in.reshape((bot_in.size//3, 3))
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(projection="3d")
     ax.set_xlabel("x")
     ax.set_ylabel("y")
@@ -159,6 +159,8 @@ def savefig(top_in, bot_in, ribo_in, to_edge_in, save_path):
     ax.scatter(top_reshape[:,0], top_reshape[:,1], top_reshape[:,2], c="r", s=2)
     ax.scatter(bot_reshape[:,0], bot_reshape[:,1], bot_reshape[:,2], c="b", s=2)
     ax.scatter(ribo_in[:,0], ribo_in[:,1], ribo_in[:,2], c=np.min(to_edge_in, axis=1), cmap="inferno_r")
+
+    ax.view_init(elev=0, azim=80)
 
     plt.tight_layout()
     plt.savefig(save_path)

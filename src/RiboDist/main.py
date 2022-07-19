@@ -19,6 +19,7 @@ from os.path import exists
 from pathlib import Path
 import pandas as pd
 import starfile as sf
+from tqdm import tqdm
 
 from magicgui import magicgui as mg
 from . import func_defs as fd
@@ -62,7 +63,9 @@ def rd_main(
 
     ribo_star, TS_list, pixel_size_nm = fd.get_ribo_from_star(star_file=str(params['star_file']))
 
-    for _, curr_ts in enumerate(TS_list):
+    tqdm_enum = tqdm(range(len(TS_list)))
+    for idx in tqdm_enum:
+        curr_ts = TS_list[idx]
         model_file = re.sub("<TS>", str(curr_ts), full_models_format)
         try:
             assert(exists(model_file))
@@ -108,6 +111,11 @@ def rd_main(
 
     # Write out star file
     sf.write(ribo_star, str(params['output_star']), overwrite=True)
+
+    # Export lamella thickness table
+    thickness_table = ribo_star['particles'][~ribo_star['particles'].rlnDistToEdge_nm.isnull()][['rlnTS', 'rlnLamellaThickness_nm']].sort_values(by='rlnTS').drop_duplicates()
+    thickness_table.to_csv(r'./lamella_thickness_nm.txt', header=None, index=None, sep=' ', mode='a')
+
 
     return "All finished."
 
