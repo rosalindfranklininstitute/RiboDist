@@ -34,8 +34,8 @@ from . import func_defs as fd
     models_folder={"widget_type": "FileEdit",
                    "label": "Folder containing models",
                    "mode": "d"},
-    models_format={"widget_type": "LineEdit",
-                   "label": f"Filename format for models. \nReplace tilt series number with <TS>."},
+    models_format={"widget_type": "FileEdit",
+                   "label": f"Filename format for models. \nReplace tilt series number with <TS>. Keep only filename."},
     models_bin={"label": "Binning factor of models",
                 "min": 1},
     star_file={"widget_type": "FileEdit",
@@ -46,13 +46,13 @@ from . import func_defs as fd
 def rd_main(
         output_star = Path("."),
         models_folder = Path("."),
-        models_format = "",
+        models_format = Path("."),
         models_bin = 1,
         star_file = Path("."),
         star_bin = 1,
 ):
     params = locals()
-    full_models_format = str(params['models_folder']) + '/' + models_format
+    full_models_format = str(params['models_folder']) + '/' + str(params['models_format'])
 
     ribo_star, TS_list, pixel_size_nm = fd.get_ribo_from_star(star_file=str(params['star_file']))
 
@@ -71,10 +71,13 @@ def rd_main(
         model = fd.get_model(model_file=model_file)
 
         #     Segmentation of surfaces
-        labels, model_upper, model_lower = fd.segment_surfaces(model_in=model)
+        _, model_upper, model_lower = fd.segment_surfaces(model_in=model)
 
         #     Plane interpolation
-        interped_top, interped_bot, to_edge = fd.interpolator(ribo, model_upper, model_lower, 100)
+        interped_top, interped_bot, to_edge, thickness = fd.interpolator(ribo,
+                                                                         model_upper[:, 1:],
+                                                                         model_lower[:, 1:],
+                                                                         100)
 
         #     Aggregation of data
         df = pd.DataFrame(columns=["x", "y", "z", "to_top", "to_bottom"])
@@ -84,9 +87,11 @@ def rd_main(
         df.to_top = to_edge[:, 0]
         df.to_bottom = to_edge[:, 1]
         df["to_any_edge"] = df[["to_top", "to_bottom"]].values.min(1)
+        df["thickness"] = thickness
 
         #     Update of star-DataFrame
         ribo_star['particles'].loc[ribo_star['particles'].rlnTS==curr_ts, 'rlnDistToEdge_nm'] = df.to_any_edge.to_numpy() * pixel_size_nm * params['models_bin'] / params['star_bin']
+        ribo_star['particles'].loc[ribo_star['particles'].rlnTS==curr_ts, 'rlnLamellaThickness_nm'] = df.thickness.to_numpy() * pixel_size_nm * params['models_bin'] / params['star_bin']
 
     # Write out star file
     sf.write(ribo_star, str(params['output_star']), overwrite=True)
