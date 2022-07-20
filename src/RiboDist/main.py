@@ -69,6 +69,8 @@ def rd_main(
     thickness_list = []
     skipped_list = []
     tqdm_enum = tqdm(range(len(model_TS_list)))
+    factor = pixel_size_nm * params['models_bin'] / params['star_bin']
+
     for idx in tqdm_enum:
         curr_ts = model_TS_list[idx]
         model_file = re.sub("\*", str(curr_ts), full_models_format)
@@ -97,7 +99,8 @@ def rd_main(
         #     Plane interpolation
         interped_top, interped_bot, thickness = fd.interpolator(model_upper[:, 1:],
                                                                 model_lower[:, 1:],
-                                                                100)
+                                                                100,
+                                                                factor)
         thickness_list.append([curr_ts, thickness])
 
         #     Calculate particle-edge distance (if coordinates given)
@@ -114,8 +117,8 @@ def rd_main(
         df["thickness"] = thickness
 
         #     Update of star-DataFrame
-        ribo_star['particles'].loc[ribo_star['particles'].rlnTS==curr_ts, 'rlnDistToEdge_nm'] = df.to_any_edge.to_numpy() * pixel_size_nm * params['models_bin'] / params['star_bin']
-        ribo_star['particles'].loc[ribo_star['particles'].rlnTS==curr_ts, 'rlnLamellaThickness_nm'] = df.thickness.to_numpy() * pixel_size_nm * params['models_bin'] / params['star_bin']
+        ribo_star['particles'].loc[ribo_star['particles'].rlnTS==curr_ts, 'rlnDistToEdge_nm'] = df.to_any_edge.to_numpy() * factor
+        ribo_star['particles'].loc[ribo_star['particles'].rlnTS==curr_ts, 'rlnLamellaThickness_nm'] = df.thickness.to_numpy()
 
         # Saving figures
         fd.savefig(top_in=interped_top,

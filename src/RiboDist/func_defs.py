@@ -122,7 +122,7 @@ def segment_surfaces(model_in):
     return labels, model_lower, model_upper
 
 
-def interpolator(upper_in, lower_in, N=100):
+def interpolator(upper_in, lower_in, N=100, conv_factor=1):
     """
     Function to interpolate surfaces and calculate distances between surfaces
 
@@ -130,6 +130,7 @@ def interpolator(upper_in, lower_in, N=100):
     upper_in (ndarray)  :: Original modelling points in upper surface
     lower_in (ndarray)  :: Original modelling points in lower surface
     N (int)             :: Number of interpolating points
+    conv_factor (float) :: Conversion factor from pixel to nm
 
     Returns:
     ndarray, ndarray, ndarray
@@ -154,7 +155,7 @@ def interpolator(upper_in, lower_in, N=100):
 
     top_centre = np.array([XX[N//2, N//2], YY[N//2, N//2], itp_top(XX[N//2], YY[N//2])[N//2]])
     bot_centre = np.array([xx[N//2, N//2], yy[N//2, N//2], itp_bot(xx[N//2], yy[N//2])[N//2]])
-    thickness = np.linalg.norm(top_centre-bot_centre, axis=0)
+    thickness = np.linalg.norm(top_centre-bot_centre, axis=0) * conv_factor
 
     return interped_top, interped_bot, thickness
 
