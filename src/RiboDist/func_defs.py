@@ -158,10 +158,12 @@ def savefig(top_in, bot_in, ribo_in, to_edge_in, save_path):
     ax.set_zlabel("z")
     ax.scatter(top_reshape[:,0], top_reshape[:,1], top_reshape[:,2], c="r", s=2)
     ax.scatter(bot_reshape[:,0], bot_reshape[:,1], bot_reshape[:,2], c="b", s=2)
-    ax.scatter(ribo_in[:,0], ribo_in[:,1], ribo_in[:,2], c=np.min(to_edge_in, axis=1), cmap="inferno_r")
+    p = ax.scatter(ribo_in[:,0], ribo_in[:,1], ribo_in[:,2], c=np.min(to_edge_in, axis=1), cmap="inferno_r")
 
     ax.view_init(elev=0, azim=80)
 
+    cax = fig.add_axes([ax.get_position().x1+0.01, ax.get_position().y0, 0.02, ax.get_position().height])
+    plt.colorbar(p, cax=cax)
     plt.tight_layout()
     plt.savefig(save_path)
     plt.close()
