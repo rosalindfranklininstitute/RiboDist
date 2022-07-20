@@ -20,6 +20,8 @@ from pathlib import Path
 import pandas as pd
 import starfile as sf
 from tqdm import tqdm
+from glob import glob
+import numpy as np
 
 from magicgui import magicgui as mg
 from . import func_defs as fd
@@ -39,7 +41,7 @@ from . import func_defs as fd
                    "label": "Folder containing models",
                    "mode": "d"},
     models_format={"widget_type": "FileEdit",
-                   "label": f"Filename format for models. \nReplace tilt series number with <TS>. Keep only filename."},
+                   "label": f"Filename format for models. \nReplace tilt series number with *. Keep only filename."},
     models_bin={"label": "Binning factor of models",
                 "min": 1},
     star_file={"widget_type": "FileEdit",
@@ -61,16 +63,26 @@ def rd_main(
     if not params['output_figs_folder'].is_dir():
         params['output_figs_folder'].mkdir()
 
+    model_TS_list = fd.get_model_list(full_models_format)
     ribo_star, TS_list, pixel_size_nm = fd.get_ribo_from_star(star_file=str(params['star_file']))
 
-    tqdm_enum = tqdm(range(len(TS_list)))
+    thickness_list = []
+    skipped_list = []
+    tqdm_enum = tqdm(range(len(model_TS_list)))
     for idx in tqdm_enum:
-        curr_ts = TS_list[idx]
-        model_file = re.sub("<TS>", str(curr_ts), full_models_format)
+        curr_ts = model_TS_list[idx]
+        model_file = re.sub("\*", str(curr_ts), full_models_format)
+
+        TS_matched = True
         try:
-            assert(exists(model_file))
+            assert(curr_ts in TS_list and glob(model_file))
         except:
-            print(f"WARNING: {model_file} doesn't exist. TS{curr_ts} skipped.")
+            TS_matched = False
+
+        try:
+            assert(glob(model_file))
+        except:
+            skipped_list.append(curr_ts)
             continue
 
         ribo = fd.get_coords(star_df_in=ribo_star['particles'],
@@ -83,10 +95,13 @@ def rd_main(
         _, model_upper, model_lower = fd.segment_surfaces(model_in=model)
 
         #     Plane interpolation
-        interped_top, interped_bot, to_edge, thickness = fd.interpolator(ribo,
-                                                                         model_upper[:, 1:],
-                                                                         model_lower[:, 1:],
-                                                                         100)
+        interped_top, interped_bot, thickness = fd.interpolator(model_upper[:, 1:],
+                                                                model_lower[:, 1:],
+                                                                100)
+        thickness_list.append([curr_ts, thickness])
+
+        #     Calculate particle-edge distance (if coordinates given)
+        to_edge = fd.calc_dist(interped_top, interped_bot, ribo)
 
         #     Aggregation of data
         df = pd.DataFrame(columns=["x", "y", "z", "to_top", "to_bottom"])
@@ -113,11 +128,14 @@ def rd_main(
     sf.write(ribo_star, str(params['output_star']), overwrite=True)
 
     # Export lamella thickness table
-    thickness_table = ribo_star['particles'][~ribo_star['particles'].rlnDistToEdge_nm.isnull()][['rlnTS', 'rlnLamellaThickness_nm']].sort_values(by='rlnTS').drop_duplicates()
-    thickness_table.to_csv(r'./lamella_thickness_nm.txt', header=None, index=None, sep=' ', mode='a')
+    # thickness_table = ribo_star['particles'][~ribo_star['particles'].rlnDistToEdge_nm.isnull()][['rlnTS', 'rlnLamellaThickness_nm']].sort_values(by='rlnTS').drop_duplicates()
+    # thickness_table.to_csv(r'./lamella_thickness_nm.txt', header=None, index=None, sep=' ', mode='a')
+    np.savetxt(r'./lamella_thickness_nm.txt',
+               thickness_list,
+               delimiter = " ",
+               fmt="%d %8.4f")
 
-
-    return "All finished."
+    return f"All finished. {len(skipped_list)} lamellae skipped."
 
 
 
