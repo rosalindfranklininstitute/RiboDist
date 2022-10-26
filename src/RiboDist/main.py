@@ -63,7 +63,7 @@ def rd_main(
     if not params['output_figs_folder'].is_dir():
         params['output_figs_folder'].mkdir()
 
-    model_TS_list = fd.get_model_list(full_models_format)
+    model_TS, model_TS_list = fd.get_model_list(full_models_format)
     ribo_star, TS_list, pixel_size_nm = fd.get_ribo_from_star(star_file=str(params['star_file']))
 
     thickness_list = []
@@ -73,7 +73,8 @@ def rd_main(
 
     for idx in tqdm_enum:
         curr_ts = model_TS_list[idx]
-        model_file = re.sub("\*", str(curr_ts), full_models_format)
+        curr_ts_str = model_TS[idx]
+        model_file = re.sub("\*", curr_ts_str, full_models_format)
 
         TS_matched = True
         try:
@@ -87,10 +88,6 @@ def rd_main(
             skipped_list.append(curr_ts)
             continue
 
-        ribo = fd.get_coords(star_df_in=ribo_star['particles'],
-                             TS=curr_ts,
-                             model_bin=params['models_bin'],
-                             star_bin=params['star_bin'])
         model = fd.get_model(model_file=model_file)
 
         #     Segmentation of surfaces
@@ -103,32 +100,37 @@ def rd_main(
                                                                 factor)
         thickness_list.append([curr_ts, thickness])
 
-        #     Calculate particle-edge distance (if coordinates given)
-        to_edge = fd.calc_dist(interped_top, interped_bot, ribo)
+        if TS_matched:
+            ribo = fd.get_coords(star_df_in=ribo_star['particles'],
+                                 TS=curr_ts,
+                                 model_bin=params['models_bin'],
+                                 star_bin=params['star_bin'])
+            #     Calculate particle-edge distance (if coordinates given)
+            to_edge = fd.calc_dist(interped_top, interped_bot, ribo)
 
-        #     Aggregation of data
-        df = pd.DataFrame(columns=["x", "y", "z", "to_top", "to_bottom"])
-        df.x = ribo[:, 0]
-        df.y = ribo[:, 1]
-        df.z = ribo[:, 2]
-        df.to_top = to_edge[:, 0]
-        df.to_bottom = to_edge[:, 1]
-        df["to_any_edge"] = df[["to_top", "to_bottom"]].values.min(1)
-        df["thickness"] = thickness
+            #     Aggregation of data
+            df = pd.DataFrame(columns=["x", "y", "z", "to_top", "to_bottom"])
+            df.x = ribo[:, 0]
+            df.y = ribo[:, 1]
+            df.z = ribo[:, 2]
+            df.to_top = to_edge[:, 0]
+            df.to_bottom = to_edge[:, 1]
+            df["to_any_edge"] = df[["to_top", "to_bottom"]].values.min(1)
+            df["thickness"] = thickness
 
-        #     Update of star-DataFrame
-        ribo_star['particles'].loc[ribo_star['particles'].rlnTS==curr_ts, 'rlnDistToEdge_nm'] = df.to_any_edge.to_numpy() * factor
-        ribo_star['particles'].loc[ribo_star['particles'].rlnTS==curr_ts, 'rlnLamellaThickness_nm'] = df.thickness.to_numpy()
+            #     Update of star-DataFrame
+            ribo_star['particles'].loc[ribo_star['particles'].rlnTS==curr_ts, 'rlnDistToEdge_nm'] = df.to_any_edge.to_numpy() * factor
+            ribo_star['particles'].loc[ribo_star['particles'].rlnTS==curr_ts, 'rlnLamellaThickness_nm'] = df.thickness.to_numpy()
 
-        # Saving figures
-        fd.savefig(top_in=interped_top,
-                   bot_in=interped_bot,
-                   ribo_in=ribo,
-                   to_edge_in=to_edge,
-                   save_path=str(params['output_figs_folder']) + '/' + f"TS_{curr_ts}.png")
+            # Saving figures
+            fd.savefig(top_in=interped_top,
+                       bot_in=interped_bot,
+                       ribo_in=ribo,
+                       to_edge_in=to_edge,
+                       save_path=str(params['output_figs_folder']) + '/' + f"TS_{curr_ts}.png")
 
-    # Write out star file
-    sf.write(ribo_star, str(params['output_star']), overwrite=True)
+            # Write out star file
+            sf.write(ribo_star, str(params['output_star']), overwrite=True)
 
     # Export lamella thickness table
     # thickness_table = ribo_star['particles'][~ribo_star['particles'].rlnDistToEdge_nm.isnull()][['rlnTS', 'rlnLamellaThickness_nm']].sort_values(by='rlnTS').drop_duplicates()

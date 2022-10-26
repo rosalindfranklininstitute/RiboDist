@@ -41,9 +41,10 @@ def get_model_list(search_str):
     Returns:
     list
     """
+    model_TS = [''.join([i[-1] for i in list(ndiff(search_str, filename)) if i.startswith('+')]) for filename in glob(search_str)]
     model_TS_list = [int(''.join([i[-1] for i in list(ndiff(search_str, filename)) if i.startswith('+')])) for filename in glob(search_str)]
 
-    return sorted(model_TS_list)
+    return sorted(model_TS), sorted(model_TS_list)
 
 
 def get_ribo_from_star(star_file):
